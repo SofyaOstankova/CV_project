@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Система детекции дорожных знаков</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4285F4;
+            --secondary-color: #34A853;
+            --danger-color: #EA4335;
+            --warning-color: #FBBC05;
+            --dark-color: #202124;
+            --light-color: #f8f9fa;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f5f5f5;
+            color: var(--dark-color);
+            line-height: 1.6;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2rem;
+            position: relative;
+        }
+        
+        header h1 {
+            font-size: 2.5rem;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            position: relative;
+            display: inline-block;
+        }
+        
+        header h1::after {
+            content: "";
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 4px;
+            background: var(--warning-color);
+            border-radius: 2px;
+        }
+        
+        header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .card-title {
+            font-size: 1.5rem;
+            color: var(--primary-color);
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card-title i {
+            color: var(--secondary-color);
+        }
+        
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        }
+        
+        #liveFeed {
+            width: 100%;
+            display: block;
+            background: #222;
+            aspect-ratio: 16/9;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background-color: #3367d6;
+            transform: translateY(-2px);
+        }
+        
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: white;
+        }
+        
+        .btn-danger:hover {
+            background-color: #d33426;
+            transform: translateY(-2px);
+        }
+        
+        .btn-success {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background-color: #2d9248;
+            transform: translateY(-2px);
+        }
+        
+        .upload-area {
+            border: 2px dashed #ccc;
+            border-radius: 10px;
+            padding: 2rem;
+            text-align: center;
+            margin: 2rem 0;
+            transition: all 0.3s;
+        }
+        
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: rgba(66, 133, 244, 0.05);
+        }
+        
+        .upload-area.highlight {
+            border-color: var(--primary-color);
+            background: rgba(66, 133, 244, 0.1);
+        }
+        
+        #fileInput {
+            display: none;
+        }
+        
+        .file-label {
+            display: block;
+            cursor: pointer;
+            font-size: 1.1rem;
+            color: #555;
+        }
+        
+        .file-label i {
+            font-size: 2rem;
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            display: block;
+        }
+        
+        .results {
+            background: white;
+            border-radius: 10px;
+            padding: 2rem;
+            margin-top: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            display: none;
+        }
+        
+        .results h3 {
+            color: var(--primary-color);
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.5rem;
+            margin: 1.5rem 0;
+        }
+        
+        .stat-item {
+            background: rgba(66, 133, 244, 0.1);
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+        }
+        
+        .stat-label {
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        .signs-list {
+            margin-top: 1.5rem;
+        }
+        
+        .signs-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 1rem;
+        }
+        
+        .sign-tag {
+            background: rgba(52, 168, 83, 0.2);
+            color: var(--secondary-color);
+            padding: 5px 15px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 1rem 0;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-radius: 50%;
+            border-top: 4px solid var(--primary-color);
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 3rem;
+            color: #666;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+            
+            header h1 {
+                font-size: 2rem;
+            }
+            
+            .card {
+                padding: 1.5rem;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-traffic-light"></i> Детекция дорожных знаков</h1>
+            <p>Система компьютерного зрения для распознавания дорожных знаков в реальном времени</p>
+        </header>
+        
+        <div class="card">
+            <h2 class="card-title"><i class="fas fa-video"></i> Потоковое видео</h2>
+            <div class="video-container">
+                <img id="liveFeed" src="" alt="Трансляция с камеры">
+            </div>
+            <div class="controls">
+                <button class="btn-primary" onclick="startCamera()">
+                    <i class="fas fa-play"></i> Запустить камеру
+                </button>
+                <button class="btn-danger" onclick="stopCamera()">
+                    <i class="fas fa-stop"></i> Остановить камеру
+                </button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h2 class="card-title"><i class="fas fa-upload"></i> Загрузка видеофайла</h2>
+            <form id="uploadForm">
+                <div class="upload-area" id="uploadArea">
+                    <label for="fileInput" class="file-label">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                        <span>Перетащите видеофайл сюда или кликните для выбора</span>
+                        <input type="file" id="fileInput" name="video" accept="video/*" required>
+                    </label>
+                </div>
+                <div class="controls">
+                    <button type="submit" class="btn-success">
+                        <i class="fas fa-cogs"></i> Обработать видео
+                    </button>
+                </div>
+            </form>
+            
+            <div class="loading" id="loading">
+                <div class="spinner"></div>
+                <p>Обработка видео...</p>
+            </div>
+            
+            <div class="results" id="results">
+                <h3><i class="fas fa-chart-bar"></i> Результаты обработки</h3>
+                
+                <div class="stats">
+                    <div class="stat-item">
+                        <div class="stat-value" id="detectionCount">0</div>
+                        <div class="stat-label">Обнаружено знаков</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="processingTime">0</div>
+                        <div class="stat-label">Секунд обработки</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-value" id="uniqueSigns">0</div>
+                        <div class="stat-label">Уникальных знаков</div>
+                    </div>
+                </div>
+                
+                <div class="signs-list">
+                    <h4><i class="fas fa-road"></i> Обнаруженные типы знаков:</h4>
+                    <div class="signs-grid" id="signsGrid"></div>
+                </div>
+                
+                <div class="controls" style="margin-top: 2rem;">
+                    <a id="downloadLink" href="#" download>
+                        <button class="btn-primary">
+                            <i class="fas fa-download"></i> Скачать обработанное видео
+                        </button>
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Система детекции дорожных знаков &copy; 2025 | Разработано с использованием YOLO и Flask</p>
+        </footer>
+    </div>
+
+    <script>
+        // Обновление live-стрима
+        function updateLiveFeed() {
+            const feedElement = document.getElementById('liveFeed');
+            feedElement.src = "/video_feed?" + new Date().getTime();
+        }
+        
+        function startCamera() {
+            fetch('/start_camera')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.status);
+                    updateLiveFeed();
+                });
+        }
+        
+        function stopCamera() {
+            fetch('/stop_camera')
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data.status);
+                    document.getElementById('liveFeed').src = "";
+                });
+        }
+        
+        // Drag and drop functionality
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('highlight');
+        });
+        
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('highlight');
+        });
+        
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('highlight');
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                updateFileName();
+            }
+        });
+        
+        fileInput.addEventListener('change', updateFileName);
+        
+        function updateFileName() {
+            if (fileInput.files.length) {
+                const fileName = fileInput.files[0].name;
+                const label = uploadArea.querySelector('span');
+                label.textContent = `Выбран файл: ${fileName}`;
+            }
+        }
+        
+        // Обработка формы загрузки видео
+        document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const loading = document.getElementById('loading');
+            const results = document.getElementById('results');
+            const formData = new FormData(this);
+            
+            // Показать индикатор загрузки
+            loading.style.display = 'block';
+            results.style.display = 'none';
+            
+            fetch('/process_video', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                
+                if (data.success) {
+                    // Обновить статистику
+                    document.getElementById('detectionCount').textContent = data.detection_count;
+                    document.getElementById('processingTime').textContent = data.processing_time.toFixed(2);
+                    document.getElementById('uniqueSigns').textContent = data.detected_signs.length;
+                    
+                    // Обновить список знаков
+                    const signsGrid = document.getElementById('signsGrid');
+                    signsGrid.innerHTML = '';
+                    data.detected_signs.forEach(sign => {
+                        const tag = document.createElement('div');
+                        tag.className = 'sign-tag';
+                        tag.textContent = sign;
+                        signsGrid.appendChild(tag);
+                    });
+                    
+                    // Обновить ссылку для скачивания
+                    const downloadLink = document.getElementById('downloadLink');
+                    downloadLink.href = `/download_video?filename=${data.output_filename}`;
+                    
+                    // Показать результаты
+                    results.style.display = 'block';
+                } else {
+                    results.innerHTML = `
+                        <h3><i class="fas fa-exclamation-triangle"></i> Ошибка обработки</h3>
+                        <p style="color: var(--danger-color); margin-top: 1rem;">${data.error}</p>
+                    `;
+                    results.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                results.innerHTML = `
+                    <h3><i class="fas fa-exclamation-triangle"></i> Ошибка</h3>
+                    <p style="color: var(--danger-color); margin-top: 1rem;">Произошла ошибка при обработке видео: ${error.message}</p>
+                `;
+                results.style.display = 'block';
+            });
+        });
+    </script>
+</body>
+</html>

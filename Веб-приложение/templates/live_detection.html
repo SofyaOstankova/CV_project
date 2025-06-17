@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Режим реального времени</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        #videoContainer { margin-top: 20px; text-align: center; }
+        #liveFeed { max-width: 80%; border: 2px solid #ddd; }
+        .controls { margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <h1>Распознавание дорожных знаков в реальном времени</h1>
+    <p>Пользователь: {{ username }}</p>
+    <div class="controls">
+        <a href="{{ url_for('detection') }}">Назад к обработке видео</a>
+    </div>
+    
+    <div id="videoContainer">
+        <img id="liveFeed" src="{{ url_for('video_feed') }}" alt="Live Feed">
+    </div>
+
+    <script>
+        // Автоматическое обновление изображения
+        const liveFeed = document.getElementById('liveFeed');
+        
+        function updateFrame() {
+            liveFeed.src = "{{ url_for('video_feed') }}?t=" + new Date().getTime();
+            setTimeout(updateFrame, 50);
+        }
+        
+        // Запускаем обновление
+        updateFrame();
+        
+        // Обработка ошибок
+        liveFeed.onerror = function() {
+            console.log("Error loading frame");
+            setTimeout(updateFrame, 1000);
+        };
+    </script>
+</body>
+</html>

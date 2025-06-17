@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Детекция дорожных знаков</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .welcome {
+            text-align: right;
+            margin-bottom: 20px;
+            color: #666;
+        }
+        .upload-section {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .upload-section:hover {
+            border-color: #999;
+        }
+        #video-upload {
+            display: none;
+        }
+        .upload-btn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .upload-btn:hover {
+            background-color: #45a049;
+        }
+        #file-name {
+            margin-top: 10px;
+            font-style: italic;
+        }
+        .results {
+            margin-top: 30px;
+            display: none;
+        }
+        .result-item {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .progress-container {
+            width: 100%;
+            background-color: #ddd;
+            border-radius: 4px;
+            margin: 20px 0;
+            display: none;
+        }
+        #progress-bar {
+            width: 0%;
+            height: 30px;
+            background-color: #4CAF50;
+            border-radius: 4px;
+            text-align: center;
+            line-height: 30px;
+            color: white;
+        }
+        .download-btn {
+            background-color: #2196F3;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            display: none;
+        }
+        .download-btn:hover {
+            background-color: #0b7dda;
+        }
+        .logout-btn {
+            background-color: #f44336;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            float: right;
+        }
+        .logout-btn:hover {
+            background-color: #d32f2f;
+        }
+        .processing-message {
+            text-align: center;
+            font-size: 18px;
+            color: #333;
+            margin: 20px 0;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <button onclick="window.location.href='/logout'" class="logout-btn">Выйти</button>
+        <div class="welcome">Добро пожаловать, <span id="username">{{ username }}</span>!</div>
+        
+        <h1>Детекция дорожных знаков в видео</h1>
+<a href="{{ url_for('live_detection') }}">Режим реального времени</a>        
+        <div class="upload-section">
+            <label for="video-upload" class="upload-btn">Выберите видео</label>
+            <input type="file" id="video-upload" accept="video/*">
+            <div id="file-name">Файл не выбран</div>
+            <button id="process-btn" class="upload-btn" disabled>Обработать видео</button>
+        </div>
+        
+        <div class="processing-message" id="processing-message">Видео обрабатывается, ожидайте...</div>
+        
+        <div class="progress-container" id="progress-container">
+            <div id="progress-bar">0%</div>
+        </div>
+        
+        <div class="results" id="results">
+            <h2>Результаты обработки:</h2>
+            <div id="processing-time"></div>
+            <div id="detected-signs"></div>
+            <div id="detection-count"></div>
+            
+            <button id="download-btn" class="download-btn">Скачать обработанное видео</button>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('video-upload').addEventListener('change', function(e) {
+            const fileName = e.target.files[0] ? e.target.files[0].name : 'Файл не выбран';
+            document.getElementById('file-name').textContent = fileName;
+            document.getElementById('process-btn').disabled = !e.target.files[0];
+        });
+
+        document.getElementById('process-btn').addEventListener('click', function() {
+            const fileInput = document.getElementById('video-upload');
+            if (!fileInput.files[0]) return;
+            
+            const formData = new FormData();
+            formData.append('video', fileInput.files[0]);
+            
+            const progressContainer = document.getElementById('progress-container');
+            const progressBar = document.getElementById('progress-bar');
+            const processingMessage = document.getElementById('processing-message');
+            
+            // Показываем сообщение о процессе обработки
+            processingMessage.style.display = 'block';
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressBar.textContent = '0%';
+            
+            // Скрываем результаты предыдущей обработки (если были)
+            document.getElementById('results').style.display = 'none';
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/process_video', true);
+            
+            xhr.upload.onprogress = function(e) {
+                if (e.lengthComputable) {
+                    const percentComplete = Math.round((e.loaded / e.total) * 100);
+                    progressBar.style.width = percentComplete + '%';
+                    progressBar.textContent = percentComplete + '%';
+                }
+            };
+            
+            xhr.onload = function() {
+                processingMessage.style.display = 'none';
+                
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    if (response.success) {
+                        showResults(response);
+                    } else {
+                        alert('Ошибка: ' + response.error);
+                    }
+                } else {
+                    alert('Произошла ошибка при обработке видео');
+                }
+            };
+            
+            xhr.send(formData);
+        });
+        
+        function showResults(data) {
+            const resultsDiv = document.getElementById('results');
+            const downloadBtn = document.getElementById('download-btn');
+            
+            document.getElementById('processing-time').innerHTML = 
+                `<strong>Время обработки:</strong> ${data.processing_time.toFixed(2)} секунд`;
+            
+            document.getElementById('detected-signs').innerHTML = 
+                `<strong>Обнаруженные знаки:</strong> ${data.detected_signs.join(', ')}`;
+            
+            document.getElementById('detection-count').innerHTML = 
+                `<strong>Всего обнаружений:</strong> ${data.detection_count}`;
+            
+            // Настройка кнопки скачивания
+            downloadBtn.onclick = function() {
+                window.location.href = `/download_video?filename=${encodeURIComponent(data.output_filename)}`;
+            };
+            
+            downloadBtn.style.display = 'inline-block';
+            resultsDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>
